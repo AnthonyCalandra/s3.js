@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script type="text/s3">@some_color : blue ; //wat.
+            @wat:123px + 7px;
+            @ok 
+            {
+                @some_color: green;
+                // wat.
+                background-color: @some_color;
+            }
+            body {
+                @ok 
+                {
+                    @some_color: cyan;
+                    // wat.
+                    background-color: @some_color;
+                }
+                @ok;
+            }
+            h1 { 
+                color: @some_color;
+            }
+            @myVar:123px;
+            div 
+            { 
+                @myVar:321px; margin: 1px 2px 3px 4px; width: @myVar;
+            }
+            // sdasdasdasd
+            /* ok */
+        </script>
+    </head>
+    <body>
+        <h1>yo</h1>
+        <script type="text/javascript" src="s3.js"></script>
+    </body>
+</html>
