@@ -1,3 +1,7 @@
+/**
+ * s3.js - Version 0.1
+ * Designed and developed by Anthony Calandra - 2014.
+ **/
 (function() {
     if (!String.prototype.trim) {
         String.prototype.trim = function() {
@@ -8,10 +12,11 @@
     var s3 = window.s3 = {},
         styleSheets = document.head.getElementsByTagName("script"),
         newStyleSheet = "",
-        currentLineNum = 0,
         blockContent = "",
         blockName = "",
-        globalInBlock = false,
+        inVarBlock = false,
+        inCommentBlock = false,
+        inCSSBlock = false,
         scope = new LinkedList();
     
     function LinkedList() {
@@ -115,11 +120,11 @@
         var msg = "";
         switch (errorId) {
             case 1:
-                msg = "Variable blocks within variable blocks currently not supported.";
+                msg = "Variable blocks within blocks currently not supported.";
                 break;
         }
         
-        throw "s3.js Parser - at line " + currentLineNum + ": " + msg;
+        throw "s3.js Parser: " + msg;
     }
 
     function tokenize(line) {
@@ -133,21 +138,25 @@
     function evaluateCSS(property, value) {
         console.log("Evaluating CSS tokens: " + property + ":" + value + ";");
         var evaluatedVariable = value;
+        // Have we found a variable?
         if (value[0] === '@') {
+            // Check to see if one exists in local/global scope.
             var variable = scope.findKey(value.substr(1));
+            // If so, the evaluated variable is the value already evaluated.
             if (variable !== null) {
                 evaluatedVariable = variable.val;
             }
         }
 
-        if (!globalInBlock) {
+        // Add to stylesheet if we aren't in a variable block.
+        if (!inVarBlock) {
             newStyleSheet += property + ":" + evaluatedVariable + ";";
         } else {
             blockContent += property + ":" + evaluatedVariable + ";";
         }
     }
 
-    function parseLine(tokens, inBlock) {
+    function parseLine(tokens) {
         var nameDecl = /\@(\D\w*)/,
             cssDecl = /^((?:\#|\.)*[A-Za-z]+)+/;
     
@@ -157,7 +166,7 @@
                 scope.addKey(name, expr);
             }
             
-            function parseBlock(blockTokens, inVarBlock) {
+            function parseBlock(blockTokens) {
                 console.log("Tokens for block: " + blockTokens);
                 // Is it a CSS property?
                 if (!inVarBlock) {
@@ -170,7 +179,7 @@
                     // Remove the opening brace.
                     blockTokens.shift();
                     if (blockTokens.length > 0) {
-                        parseLine(blockTokens, inVarBlock);
+                        parseLine(blockTokens);
                     }
                 }
             }
@@ -178,6 +187,16 @@
         for (var tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
             var token = tokens[tokenIdx],
                 currentLength = tokens.length;
+        
+            // Skip until we find the ending comment.
+            if (inCommentBlock) {
+                if (token === "*/") {
+                    inCommentBlock = false;
+                }
+                
+                continue;
+            }
+        
             // Has a valid var or block name been defined?
             if (nameDecl.test(token)) {
                 var varName = token.substr(1);
@@ -186,20 +205,21 @@
                     tokens.splice(0, 4);
                 } else if (currentLength >= 2 && tokens[tokenIdx + 1] === ";") {
                     newStyleSheet += scope.findKey(varName).val;
+                    tokens.splice(0, 2);
                 } else {
-                    if (globalInBlock) {
+                    if (inVarBlock || inCSSBlock) {
                         throwError(1);
                     }
                     
                     var endBlockIdx = tokens.indexOf("}");
                     blockName = varName;
-                    globalInBlock = true;
-                    scope.addKey(blockName, "");
+                    inVarBlock = true;
+                    // Add new block scope.
                     scope.addToHead({});
                     if (endBlockIdx == -1) {
-                        parseBlock(tokens.splice(0, tokens.length), true);
+                        parseBlock(tokens.splice(0, tokens.length));
                     } else {
-                        parseBlock(tokens.splice(0, endBlockIdx + 1), true);
+                        parseBlock(tokens.splice(0, endBlockIdx + 1));
                     }
                 }
             } else if (cssDecl.test(token)) { // Probably a vanilla CSS declaration.
@@ -210,25 +230,34 @@
                     tokenIdx = -1;
                 } else {
                     var endBlockIdx = tokens.indexOf("}");
+                    inCSSBlock = true;
                     if (endBlockIdx == -1) {
-                        parseBlock(tokens.splice(0, tokens.length), false);
+                        parseBlock(tokens.splice(0, tokens.length));
                     } else {
-                        parseBlock(tokens.splice(0, endBlockIdx + 1), false);
+                        parseBlock(tokens.splice(0, endBlockIdx + 1));
                     }
                 }
             } else { // Other stuff... comments, ending blocks, grandma's pie.
                 if (token.substring(0, 2) === "//") {
-                    continue;
+                    // Skip the entire line.
+                    break;
                 } else if (token.substring(0, 2) === "/*") {
-                    console.log("TODO: Handle comment block.");
+                    inCommentBlock = true;
                 } else if (token === "}") {
-                    if (!globalInBlock) {
+                    if (!inVarBlock) {
+                        if (inCSSBlock) {
+                            inCSSBlock = false;
+                        }
+                        
                         newStyleSheet += "}";
                     } else {
-                        globalInBlock = false;
+                        inVarBlock = false;
+                        // Remove local scope object and add contents of variable
+                        // block to current scope.
                         scope.removeHead();
                         scope.addKey(blockName, blockContent);
                         scope.print();
+                        
                         blockName = "";
                     }
                 }
@@ -242,16 +271,13 @@
             var lineTokens = tokenize(str);
             if (lineTokens !== []) {
                 console.log("Stylesheet tokens for a line: " + lineTokens);
-                parseLine(lineTokens, globalInBlock);
+                parseLine(lineTokens);
             }
         };
         if (typeof styleSheet === "string") {
-            currentLineNum++;
             doParse(styleSheet);
         } else {
-            currentLineNum  = 0;
             for (var lineNum = 1; lineNum <= styleSheet.length; lineNum++) {
-                currentLineNum = lineNum;
                 doParse(styleSheet[lineNum - 1]);
             }
         }
