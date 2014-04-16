@@ -3,21 +3,11 @@
  * Designed and developed by Anthony Calandra - 2014.
  **/
 (function() {
-    if (!String.prototype.trim) {
+    if (typeof String.prototype.trim !== "function") {
         String.prototype.trim = function() {
             return this.replace(/^\s+|\s+$/g, "");
         };
     }
-    
-    var s3 = window.s3 = {},
-        styleSheets = document.head.getElementsByTagName("script"),
-        newStyleSheet = "",
-        blockContent = "",
-        blockName = "",
-        inVarBlock = false,
-        inCommentBlock = false,
-        inCSSBlock = false,
-        scope = new LinkedList();
     
     function LinkedList() {
         this.linkedList = {
@@ -32,7 +22,7 @@
             element: obj,
             next: null
         };
-        if (this.linkedList.length == 0) {
+        if (this.linkedList.length === 0) {
             this.linkedList.head = newNode;
             this.linkedList.tail = this.linkedList.head;
         } else {
@@ -56,7 +46,7 @@
 
     LinkedList.prototype.findKey = function(key) {
         var currentNode = this.linkedList.head,
-                index = 0;
+            index = 0;
         while (index < this.linkedList.length) {
             if (currentNode.element[key] !== undefined) {
                 return {
@@ -73,7 +63,6 @@
     };
 
     LinkedList.prototype.addKey = function(key, val, index) {
-        var index = index || 0;
         if (index < 0 || index >= this.linkedList.length) {
             return false;
         }
@@ -90,10 +79,11 @@
 
     LinkedList.prototype.print = function() {
         var length = this.linkedList.length,
-            currentNode = this.linkedList.head;
+            currentNode = this.linkedList.head,
+            msg = "",
+            e = null;
         while (length > 0) {
-            var msg = "";
-            for (var e in currentNode.element) {
+            for (e in currentNode.element) {
                 if (currentNode.element.hasOwnProperty(e)) {
                     msg += "key=" + e + " val=" + currentNode.element[e] + " ";
                 }
@@ -102,6 +92,7 @@
             console.log(msg);
             currentNode = currentNode.next;
             length--;
+            msg = "";
         }
     };
 
@@ -109,6 +100,16 @@
         delete this.linkedList;
         this.linkedList = null;
     };
+    
+    var s3 = {},
+        styleSheets = document.head.getElementsByTagName("script"),
+        newStyleSheet = "",
+        blockContent = "",
+        blockName = "",
+        inVarBlock = false,
+        inCommentBlock = false,
+        inCSSBlock = false,
+        scope = new LinkedList();
     
     function applyStyle(styleSheet) {
         var styleElement = document.createElement("style");
@@ -137,11 +138,12 @@
     
     function evaluateCSS(property, value) {
         console.log("Evaluating CSS tokens: " + property + ":" + value + ";");
-        var evaluatedVariable = value;
+        var evaluatedVariable = value,
+            variable = null;
         // Have we found a variable?
         if (value[0] === '@') {
             // Check to see if one exists in local/global scope.
-            var variable = scope.findKey(value.substr(1));
+            variable = scope.findKey(value.substr(1));
             // If so, the evaluated variable is the value already evaluated.
             if (variable !== null) {
                 evaluatedVariable = variable.val;
@@ -216,7 +218,7 @@
                     inVarBlock = true;
                     // Add new block scope.
                     scope.addToHead({});
-                    if (endBlockIdx == -1) {
+                    if (endBlockIdx === -1) {
                         parseBlock(tokens.splice(0, tokens.length));
                     } else {
                         parseBlock(tokens.splice(0, endBlockIdx + 1));
@@ -231,7 +233,7 @@
                 } else {
                     var endBlockIdx = tokens.indexOf("}");
                     inCSSBlock = true;
-                    if (endBlockIdx == -1) {
+                    if (endBlockIdx === -1) {
                         parseBlock(tokens.splice(0, tokens.length));
                     } else {
                         parseBlock(tokens.splice(0, endBlockIdx + 1));
