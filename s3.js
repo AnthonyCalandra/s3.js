@@ -109,7 +109,8 @@
         inVarBlock = false,
         inCommentBlock = false,
         inCSSBlock = false,
-        scope = new LinkedList();
+        scope = new LinkedList(),
+        definedFunctions = {};
     
     function applyStyle(styleSheet) {
         var styleElement = document.createElement("style");
@@ -123,9 +124,20 @@
             case 1:
                 msg = "Variable blocks within blocks currently not supported.";
                 break;
+            case 2:
+                var varName = arguments[1];
+                msg = "Invalid variable name: " + varName + ". Cannot start with numbers or include special characters.";
+                break;
+            case 3:
+                var varName = arguments[1];
+                msg = "Undefined variable: " + varName + ".";
+                break;
+            case 4:
+                var funcName = arguments[1];
+                msg = "Function undefined: " + funcName + ".";
         }
         
-        throw "s3.js Parser: " + msg;
+        throw "s3.js Parser - " + msg;
     }
 
     function tokenize(line) {
@@ -141,12 +153,14 @@
         var evaluatedVariable = value,
             variable = null;
         // Have we found a variable?
-        if (value[0] === '@') {
+        if (value[0] === "@") {
             // Check to see if one exists in local/global scope.
             variable = scope.findKey(value.substr(1));
             // If so, the evaluated variable is the value already evaluated.
             if (variable !== null) {
                 evaluatedVariable = variable.val;
+            } else {
+                throwError(3, value);
             }
         }
 
@@ -157,14 +171,61 @@
             blockContent += property + ":" + evaluatedVariable + ";";
         }
     }
+    
+    function applyFunction(name, arguments) {
+        var func = definedFunctions[name];
+        if (func) {
+            func.apply(null, arguments);
+        } else {
+            throwError(4, name);
+        }
+    }
 
     function parseLine(tokens) {
-        var nameDecl = /\@(\D\w*)/,
+        var nameDecl = /\@\w+/,
+            validNameDec = /^[a-zA-Z]\w*$/,
             cssDecl = /^((?:\#|\.)*[A-Za-z]+)+/;
     
             function parseVariable(name, expr) {
                 console.log("Parse var: " + name + " with expression: " + expr);
-                // TODO: mathematical/function operations.
+                var operators = /\s*(\+|\-|\*|\\)\s*(?!.*\))/g,
+                    isFunction = /^([a-zA-Z]\w*)(?=\(.*\))/,
+                    operands = expr.split(operators);
+            
+                // TODO: function operations.
+
+                // Are there mathematical operators present?
+                if (operands.length > 1) {
+                    ; // TODO
+                } else {
+                    // Evaluate the variable.
+                    if (expr[0] === "@") {
+                        // Check to see if one exists in local/global scope.
+                        var variable = scope.findKey(expr.substr(1));
+                        // If so, the evaluated variable is the value already evaluated.
+                        if (variable !== null) {
+                            expr = variable.val;
+                        } else {
+                            throwError(3, expr);
+                        }
+                    } else if (isFunction.test(expr)) {
+                        var functionData = /^([a-zA-Z]\w*)\(\s*(.*)\s*\)/.exec(expr);
+                        // No arguments.
+                        if (functionData[2] === "") {
+                            applyFunction(functionData[1], []);
+                        } else {
+                            // TODO
+                            /*var args = [];
+                            for (var index = 0; index < ; index++) {
+                                if ()
+                            }
+                            
+                            applyFunction(functionData[1], args);*/
+                        }
+                    }
+                }
+                
+                // Store the evaluated result.
                 scope.addKey(name, expr);
             }
             
@@ -197,17 +258,27 @@
                 }
                 
                 continue;
-            }
-        
-            // Has a valid var or block name been defined?
-            if (nameDecl.test(token)) {
+            } else if (token.substring(0, 2) === "//") {
+                // Skip the entire line.
+                break;
+            } else if (token.substring(0, 2) === "/*") {
+                inCommentBlock = true;
+            } else if (nameDecl.test(token)) { // Has a valid var or block name been defined?
                 var varName = token.substr(1);
+                if (!validNameDec.test(varName)) {
+                    throwError(2, token);
+                }
+                
                 if (currentLength >= 4 && tokens[tokenIdx + 1] === ":") {
                     parseVariable(varName, tokens[tokenIdx + 2]);
                     tokens.splice(0, 4);
+                    // Reset token index to start at beginning of tokens array.
+                    tokenIdx = -1;
                 } else if (currentLength >= 2 && tokens[tokenIdx + 1] === ";") {
                     newStyleSheet += scope.findKey(varName).val;
                     tokens.splice(0, 2);
+                    // Reset token index to start at beginning of tokens array.
+                    tokenIdx = -1;
                 } else {
                     if (inVarBlock || inCSSBlock) {
                         throwError(1);
@@ -222,6 +293,8 @@
                         parseBlock(tokens.splice(0, tokens.length));
                     } else {
                         parseBlock(tokens.splice(0, endBlockIdx + 1));
+                        // Reset token index to start at beginning of tokens array.
+                        tokenIdx = -1;
                     }
                 }
             } else if (cssDecl.test(token)) { // Probably a vanilla CSS declaration.
@@ -237,15 +310,12 @@
                         parseBlock(tokens.splice(0, tokens.length));
                     } else {
                         parseBlock(tokens.splice(0, endBlockIdx + 1));
+                        // Reset token index to start at beginning of tokens array.
+                        tokenIdx = -1;
                     }
                 }
             } else { // Other stuff... comments, ending blocks, grandma's pie.
-                if (token.substring(0, 2) === "//") {
-                    // Skip the entire line.
-                    break;
-                } else if (token.substring(0, 2) === "/*") {
-                    inCommentBlock = true;
-                } else if (token === "}") {
+                if (token === "}") {
                     if (!inVarBlock) {
                         if (inCSSBlock) {
                             inCSSBlock = false;
