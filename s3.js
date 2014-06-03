@@ -10,44 +10,85 @@
     }
     
     function LinkedList() {
-        this.linkedList = {
-            length: 0,
-            head: null,
-            tail: null
-        };
+        this.length = 0;
+        this.head = null;
+        this.tail = null;
     }
 
-    LinkedList.prototype.addToHead = function(obj) {
+    LinkedList.prototype.addToHead = function(e) {
         var newNode = {
-            element: obj,
-            next: null
+            "element": e,
+            "next": null,
+            "prev": null
         };
-        if (this.linkedList.length === 0) {
-            this.linkedList.head = newNode;
-            this.linkedList.tail = this.linkedList.head;
+        if (this.length === 0) {
+            this.head = newNode;
+            this.tail = this.head;
         } else {
-            newNode.next = this.linkedList.head;
-            this.linkedList.head = newNode;
+            this.head.prev = newNode;
+            newNode.next = this.head;
+            this.head = newNode;
         }
 
-        this.linkedList.length++;
+        this.length++;
     };
 
     LinkedList.prototype.removeHead = function() {
-        var head = null;
-        if (this.linkedList.length > 0) {
-            head = this.linkedList.head.element;
-            this.linkedList.head = this.linkedList.head.next;
-            this.linkedList.length--;
+        if (this.length > 0) {
+            var head = this.head.element;
+            this.head = this.head.next;
+            this.length--;
+            return head;
+        } else {
+            return null;
         }
-
-        return head;
+    };
+    
+    LinkedList.prototype.addToTail = function(e) {
+        if (this.length === 0) {
+            this.addToHead(e);
+            return;
+        }
+        
+        var newNode = {
+            "element": e,
+            "next": null,
+            "prev": this.tail
+        };
+        this.tail.next = newNode;
+        this.tail = newNode;
+        this.length++;
     };
 
+    LinkedList.prototype.removeTail = function() {
+        if (this.length > 0) {
+            var tail = this.tail.element;
+            this.tail = this.tail.prev;
+            this.length--;
+            return tail;
+        } else {
+            return null;
+        }
+    };
+    
+    LinkedList.prototype.get = function(index) {
+        if (index >= this.length || index < 0) {
+            return null;
+        }
+
+        var e = this.head;
+        for (var i = 0; i < index; i++) {
+            e = e.next;
+        }
+
+        return e.element;
+    };
+
+    // TODO: implement as function, not as method of LinkedList.
     LinkedList.prototype.findKey = function(key) {
-        var currentNode = this.linkedList.head,
+        var currentNode = this.head,
             index = 0;
-        while (index < this.linkedList.length) {
+        while (index < this.length) {
             if (currentNode.element[key] !== undefined) {
                 return {
                     "val": currentNode.element[key],
@@ -62,12 +103,13 @@
         return null;
     };
 
+    // TODO: implement as function, not as method of LinkedList.
     LinkedList.prototype.addKey = function(key, val, index) {
-        if (index < 0 || index >= this.linkedList.length) {
+        if (index < 0 || index >= this.length) {
             return false;
         }
 
-        var currentNode = this.linkedList.head;
+        var currentNode = this.head;
         while (index) {
             currentNode = currentNode.next;
             index--;
@@ -77,28 +119,70 @@
         return true;
     };
 
+    // TODO: remove (for testing).
     LinkedList.prototype.print = function() {
-        var length = this.linkedList.length,
-            currentNode = this.linkedList.head,
+        var length = this.length,
+            currentNode = this.head,
             msg = "",
             e = null;
         while (length > 0) {
-            for (e in currentNode.element) {
+            /*currentNode.element.forEach(function(e) {
                 if (currentNode.element.hasOwnProperty(e)) {
                     msg += "key=" + e + " val=" + currentNode.element[e] + " ";
                 }
-            }
+            });*/
             
-            console.log(msg);
+            msg += currentNode.element + ", ";
             currentNode = currentNode.next;
             length--;
-            msg = "";
+            //msg = "";
         }
+        
+        console.log(msg);
     };
 
     LinkedList.prototype.destroy = function() {
-        delete this.linkedList;
-        this.linkedList = null;
+        delete this;
+    };
+    
+    function TokenQueue() {
+        this.list = new LinkedList();
+        this.length = 0;
+    }
+    
+    TokenQueue.prototype.enqueue = function(e) {
+        this.list.addToTail(e);
+        this.length++;
+    };
+    
+    TokenQueue.prototype.peek = function() {
+        if (this.length > 0) {
+            return this.list.get(0);
+        } else {
+            return null;
+        }
+    };
+    
+    TokenQueue.prototype.dequeue = function() {
+        if (this.length > 0) {
+            this.length--;
+            return this.list.removeHead();
+        } else {
+            return null;
+        }
+    };
+    
+    TokenQueue.prototype.isEmpty = function() {
+        return this.length === 0;
+    };
+    
+    TokenQueue.prototype.size = function() {
+        return this.length;
+    };
+    
+    // TODO: remove (for testing).
+    TokenQueue.prototype.print = function() {
+        this.list.print();
     };
     
     var s3 = {},
@@ -110,7 +194,10 @@
         inCommentBlock = false,
         inCSSBlock = false,
         scope = new LinkedList(),
-        definedFunctions = {};
+        definedFunctions = (function() {
+            // TODO
+            return [];
+        })();
     
     function applyStyle(styleSheet) {
         var styleElement = document.createElement("style");
@@ -141,11 +228,16 @@
     }
 
     function tokenize(line) {
-        var tokenDelimiters = /\s*(\:|\;|\{|\}){1}\s*/g,
-            tokens = line.split(tokenDelimiters);
-        return tokens.filter(function(token) {
-            return token !== "";
+        var // Split line by delimiters for each token.
+            tokens = line.split(/\s*(\:|\;|\{|\}){1}\s*/g),
+            tokenQueue = new TokenQueue();
+
+        tokens.forEach(function(token) {
+            if (token !== "") {
+                tokenQueue.enqueue(token);
+            }
         });
+        return tokenQueue;
     }
     
     function evaluateCSS(property, value) {
@@ -182,74 +274,68 @@
     }
 
     function parseLine(tokens) {
-        var nameDecl = /\@\w+/,
-            validNameDec = /^[a-zA-Z]\w*$/,
-            cssDecl = /^((?:\#|\.)*[A-Za-z]+)+/;
-    
-            function parseVariable(name, expr) {
-                console.log("Parse var: " + name + " with expression: " + expr);
-                var operators = /\s*(\+|\-|\*|\\)\s*(?!.*\))/g,
-                    isFunction = /^([a-zA-Z]\w*)(?=\(.*\))/,
-                    operands = expr.split(operators);
-            
-                // TODO: function operations.
+        function parseVariable(name, expr) {
+            console.log("Parse var: " + name + " with expression: " + expr);
+            var operands = expr.split(/\s*(\+|\-|\*|\/)\s*(?!.*\))/g);
 
-                // Are there mathematical operators present?
-                if (operands.length > 1) {
-                    ; // TODO
-                } else {
-                    // Evaluate the variable.
-                    if (expr[0] === "@") {
-                        // Check to see if one exists in local/global scope.
-                        var variable = scope.findKey(expr.substr(1));
-                        // If so, the evaluated variable is the value already evaluated.
-                        if (variable !== null) {
-                            expr = variable.val;
-                        } else {
-                            throwError(3, expr);
-                        }
-                    } else if (isFunction.test(expr)) {
-                        var functionData = /^([a-zA-Z]\w*)\(\s*(.*)\s*\)/.exec(expr);
-                        // No arguments.
-                        if (functionData[2] === "") {
-                            applyFunction(functionData[1], []);
-                        } else {
-                            // TODO
-                            /*var args = [];
-                            for (var index = 0; index < ; index++) {
-                                if ()
-                            }
-                            
-                            applyFunction(functionData[1], args);*/
-                        }
+            // TODO: function operations.
+
+            // Are there mathematical operators present?
+            if (operands.length > 1) {
+                ; // TODO
+            } else {
+                // Evaluate the variable.
+                if (expr[0] === "@") {
+                    // Check to see if one exists in local/global scope.
+                    var variable = scope.findKey(expr.substr(1));
+                    // If so, the evaluated variable is the value already evaluated.
+                    if (variable !== null) {
+                        expr = variable.val;
+                    } else {
+                        throwError(3, expr);
                     }
-                }
-                
-                // Store the evaluated result.
-                scope.addKey(name, expr);
-            }
-            
-            function parseBlock(blockTokens) {
-                console.log("Tokens for block: " + blockTokens);
-                // Is it a CSS property?
-                if (!inVarBlock) {
-                    newStyleSheet += blockTokens[0] + "{";
-                }
-                
-                // Remove the block identifier or opening brace.
-                blockTokens.shift();
-                if (blockTokens.length > 0) {
-                    // Remove the opening brace.
-                    blockTokens.shift();
-                    if (blockTokens.length > 0) {
-                        parseLine(blockTokens);
+                } else if (/^([a-zA-Z]\w*)(?=\(.*\))/.test(expr)) { // Is it a function?
+                    var functionData = /^([a-zA-Z]\w*)\(\s*(.*)\s*\)/.exec(expr);
+                    // No arguments.
+                    if (functionData[2] === "") {
+                        applyFunction(functionData[1], []);
+                    } else {
+                        // TODO
+                        /*var args = [];
+                         for (var index = 0; index < ; index++) {
+                         if ()
+                         }
+                         
+                         applyFunction(functionData[1], args);*/
                     }
                 }
             }
+
+            // Store the evaluated result.
+            scope.addKey(name, expr);
+        }
             
-        for (var tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
-            var token = tokens[tokenIdx],
-                currentLength = tokens.length;
+        function parseBlock(blockTokens) {
+            var token = blockTokens.dequeue();
+            console.log("Tokens for block: " + token);
+            // Is it a CSS property?
+            if (!inVarBlock) {
+                newStyleSheet += token + "{";
+            }
+
+            if (blockTokens.size() > 0) {
+                // Remove the opening brace.
+                blockTokens.dequeue();
+                if (blockTokens.size() > 0) {
+                    parseLine(blockTokens);
+                }
+            }
+        }
+            
+        while (!tokens.isEmpty()) {
+            var currentLength = tokens.size(),
+                token = tokens.dequeue(),
+                nextToken = tokens.peek();
         
             // Skip until we find the ending comment.
             if (inCommentBlock) {
@@ -263,56 +349,69 @@
                 break;
             } else if (token.substring(0, 2) === "/*") {
                 inCommentBlock = true;
-            } else if (nameDecl.test(token)) { // Has a valid var or block name been defined?
+            } else if (/^\@\w+/.test(token)) { // Has a valid var or block name been defined?
                 var varName = token.substr(1);
-                if (!validNameDec.test(varName)) {
+                if (!/^[a-zA-Z]\w*$/.test(varName)) {
                     throwError(2, token);
                 }
                 
-                if (currentLength >= 4 && tokens[tokenIdx + 1] === ":") {
-                    parseVariable(varName, tokens[tokenIdx + 2]);
-                    tokens.splice(0, 4);
-                    // Reset token index to start at beginning of tokens array.
-                    tokenIdx = -1;
-                } else if (currentLength >= 2 && tokens[tokenIdx + 1] === ";") {
+                if (currentLength >= 4 && nextToken === ":") {
+                    // Dequeue the ':'.
+                    tokens.dequeue();
+                    // Dequeue and pass variable value as arg.
+                    parseVariable(varName, tokens.dequeue());
+                    // Dequeue the ';'.
+                    tokens.dequeue();
+                } else if (currentLength >= 2 && nextToken === ";") {
                     newStyleSheet += scope.findKey(varName).val;
-                    tokens.splice(0, 2);
-                    // Reset token index to start at beginning of tokens array.
-                    tokenIdx = -1;
+                    // Dequeue the ';'.
+                    tokens.dequeue();
                 } else {
                     if (inVarBlock || inCSSBlock) {
                         throwError(1);
                     }
                     
-                    var endBlockIdx = tokens.indexOf("}");
+                    var blockTokens = new TokenQueue();
+                    blockTokens.enqueue(token);
+                    // Add tokens until end of line or until ending brace of
+                    // block is found.
+                    while (!tokens.isEmpty()) {
+                        var currentBlockToken = tokens.dequeue();
+                        blockTokens.enqueue(currentBlockToken);
+                        if (currentBlockToken === "}") {
+                            break;
+                        }
+                    }
+
                     blockName = varName;
                     inVarBlock = true;
                     // Add new block scope.
                     scope.addToHead({});
-                    if (endBlockIdx === -1) {
-                        parseBlock(tokens.splice(0, tokens.length));
-                    } else {
-                        parseBlock(tokens.splice(0, endBlockIdx + 1));
-                        // Reset token index to start at beginning of tokens array.
-                        tokenIdx = -1;
-                    }
+                    parseBlock(blockTokens);
                 }
-            } else if (cssDecl.test(token)) { // Probably a vanilla CSS declaration.
-                if (currentLength >= 4 && tokens[tokenIdx + 1] === ":") {
-                    var cssTokens = tokens.splice(0, 4);
-                    evaluateCSS(cssTokens[0], cssTokens[2]);
-                    // Reset token index to start at beginning of tokens array.
-                    tokenIdx = -1;
+            } else if (/^((?:\#|\.)*[A-Za-z]+)+/.test(token)) { // Probably a vanilla CSS declaration.
+                if (currentLength >= 4 && nextToken === ":") {
+                    // Dequeue the ':'.
+                    tokens.dequeue();
+                    // Dequeue the CSS value and pass it as an arg.
+                    evaluateCSS(token, tokens.dequeue());
+                    // Dequeue the ';'.
+                    tokens.dequeue();
                 } else {
-                    var endBlockIdx = tokens.indexOf("}");
-                    inCSSBlock = true;
-                    if (endBlockIdx === -1) {
-                        parseBlock(tokens.splice(0, tokens.length));
-                    } else {
-                        parseBlock(tokens.splice(0, endBlockIdx + 1));
-                        // Reset token index to start at beginning of tokens array.
-                        tokenIdx = -1;
+                    var cssTokens = new TokenQueue();
+                    cssTokens.enqueue(token);
+                    // Add tokens until end of line or until ending brace of
+                    // CSS rule is found.
+                    while (!tokens.isEmpty()) {
+                        var currentCSSToken = tokens.dequeue();
+                        cssTokens.enqueue(currentCSSToken);
+                        if (currentCSSToken === "}") {
+                            break;
+                        }
                     }
+                    
+                    inCSSBlock = true;
+                    parseBlock(cssTokens);
                 }
             } else { // Other stuff... comments, ending blocks, grandma's pie.
                 if (token === "}") {
@@ -341,8 +440,8 @@
         // TODO: new name..? ugh.
         var doParse = function(str) {
             var lineTokens = tokenize(str);
-            if (lineTokens !== []) {
-                console.log("Stylesheet tokens for a line: " + lineTokens);
+            if (!lineTokens.isEmpty()) {
+                //console.log("Stylesheet tokens for a line: ");
                 parseLine(lineTokens);
             }
         };
