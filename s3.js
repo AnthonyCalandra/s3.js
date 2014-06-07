@@ -194,9 +194,14 @@
         inCommentBlock = false,
         inCSSBlock = false,
         scope = new LinkedList(),
+        cssFunctions = ["attr", "blur", "brightness", "calc", "circle", "contrast", "cubic-bezier", "cycle", "drop-shadow", "element", "ellipse", "grayscale", "hsl", "hsla", "hue-rotate", "image", "inset", "invert", "linear-gradient", "matrix", "matrix3d", "minmax", "opacity", "perspective", "polygon", "radial-gradient", "rect", "repeat", "repeating-linear-gradient", "repeating-radial-gradient", "rgb", "rgba", "rotate", "rotatex", "rotatey", "rotatez", "rotate3d", "saturate", "scale", "scalex", "scaley", "scalez", "scale3d", "sepia", "skew", "skewx", "skewy", "steps", "translate", "translatex", "translatey", "translatez", "translate3d", "url", "var"],
         definedFunctions = (function() {
             // TODO
-            return [];
+            return {
+                "url": function() {
+                    return "url(\"wat.png\")";
+                }
+            };
         })();
     
     function applyStyle(styleSheet) {
@@ -240,22 +245,57 @@
         return tokenQueue;
     }
     
-    function evaluateCSS(property, value) {
-        console.log("Evaluating CSS tokens: " + property + ":" + value + ";");
-        var evaluatedVariable = value,
-            variable = null;
-        // Have we found a variable?
-        if (value[0] === "@") {
-            // Check to see if one exists in local/global scope.
-            variable = scope.findKey(value.substr(1));
-            // If so, the evaluated variable is the value already evaluated.
-            if (variable !== null) {
-                evaluatedVariable = variable.val;
-            } else {
-                throwError(3, value);
+    function evaluateExpression(expr) {
+        var operands = expr.split(/\s*(\+|\-|\*|\/)\s*(?!.*\))/g),
+            isFunction = /^([a-zA-Z][\w\-]*)(?=\(.*\))/;
+
+        // TODO: function operations.
+
+        // Are there mathematical operators present?
+        if (operands.length > 1) {
+            if (isFunction.test(expr)) { // Is it a function?
+                ; // TODO
+            } else { // Must be some math expressions then.
+                // Cheating cause CSS has the calc "function" but support
+                // in older browsers is limited.
+                expr = "calc(" + expr + ")";
+            }
+        } else {
+            // Evaluate the variable.
+            if (expr[0] === "@") {
+                // Check to see if one exists in local/global scope.
+                var variable = scope.findKey(expr.substr(1));
+                // If so, the evaluated variable is the value already evaluated.
+                if (variable !== null) {
+                    expr = variable.val;
+                } else {
+                    throwError(3, expr);
+                }
+            } else if (isFunction.test(expr)) { // Is it a function?
+                var functionData = /^([a-zA-Z][\w\-]*)\(\s*(.*)\s*\)/.exec(expr),
+                    functionName = functionData[1],
+                    parameters = functionData[2];
+                // No arguments.
+                if (parameters === "") {
+                    expr = applyFunction(functionName, []);
+                } else {
+                    // TODO
+                    /*var args = [];
+                     for (var index = 0; index < ; index++) {
+                     if ()
+                     }
+                     
+                     applyFunction(functionData[1], args);*/
+                }
             }
         }
-
+        
+        return expr;
+    }
+    
+    function evaluateCSS(property, value) {
+        console.log("Evaluating CSS tokens: " + property + ":" + value + ";");
+        var evaluatedVariable = evaluateExpression(value);
         // Add to stylesheet if we aren't in a variable block.
         if (!inVarBlock) {
             newStyleSheet += property + ":" + evaluatedVariable + ";";
@@ -266,53 +306,27 @@
     
     function applyFunction(name, arguments) {
         var func = definedFunctions[name];
-        if (func) {
-            func.apply(null, arguments);
-        } else {
-            throwError(4, name);
+        // Has the function not been defined with the given name?
+        if (!func) {
+            // Is it a CSS function?
+            if (cssFunctions.indexOf(name) !== -1) {
+                // Re-build the expression.
+                return name + "(" + arguments.toString() + ")";
+            } else {
+                // Undefined function - throw error.
+                throwError(4, name);
+            }
         }
+        
+        // Otherwise, apply the function with given args.
+        return func.apply(null, arguments);
     }
 
     function parseLine(tokens) {
         function parseVariable(name, expr) {
             console.log("Parse var: " + name + " with expression: " + expr);
-            var operands = expr.split(/\s*(\+|\-|\*|\/)\s*(?!.*\))/g);
-
-            // TODO: function operations.
-
-            // Are there mathematical operators present?
-            if (operands.length > 1) {
-                ; // TODO
-            } else {
-                // Evaluate the variable.
-                if (expr[0] === "@") {
-                    // Check to see if one exists in local/global scope.
-                    var variable = scope.findKey(expr.substr(1));
-                    // If so, the evaluated variable is the value already evaluated.
-                    if (variable !== null) {
-                        expr = variable.val;
-                    } else {
-                        throwError(3, expr);
-                    }
-                } else if (/^([a-zA-Z]\w*)(?=\(.*\))/.test(expr)) { // Is it a function?
-                    var functionData = /^([a-zA-Z]\w*)\(\s*(.*)\s*\)/.exec(expr);
-                    // No arguments.
-                    if (functionData[2] === "") {
-                        applyFunction(functionData[1], []);
-                    } else {
-                        // TODO
-                        /*var args = [];
-                         for (var index = 0; index < ; index++) {
-                         if ()
-                         }
-                         
-                         applyFunction(functionData[1], args);*/
-                    }
-                }
-            }
-
             // Store the evaluated result.
-            scope.addKey(name, expr);
+            scope.addKey(name, evaluateExpression(expr));
         }
             
         function parseBlock(blockTokens) {
