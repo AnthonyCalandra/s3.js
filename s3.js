@@ -119,28 +119,6 @@
         return true;
     };
 
-    // TODO: remove (for testing).
-    LinkedList.prototype.print = function() {
-        var length = this.length,
-            currentNode = this.head,
-            msg = "",
-            e = null;
-        while (length > 0) {
-            /*currentNode.element.forEach(function(e) {
-                if (currentNode.element.hasOwnProperty(e)) {
-                    msg += "key=" + e + " val=" + currentNode.element[e] + " ";
-                }
-            });*/
-            
-            msg += currentNode.element + ", ";
-            currentNode = currentNode.next;
-            length--;
-            //msg = "";
-        }
-        
-        console.log(msg);
-    };
-
     LinkedList.prototype.destroy = function() {
         delete this;
     };
@@ -180,11 +158,6 @@
         return this.length;
     };
     
-    // TODO: remove (for testing).
-    TokenQueue.prototype.print = function() {
-        this.list.print();
-    };
-    
     var s3 = {},
         styleSheets = document.head.getElementsByTagName("script"),
         newStyleSheet = "",
@@ -200,6 +173,9 @@
             return {
                 "url": function() {
                     return "url(\"wat.png\")";
+                },
+                "add": function(x, y) {
+                    return parseInt(x) + parseInt(y) + "px";
                 }
             };
         })();
@@ -245,51 +221,119 @@
         return tokenQueue;
     }
     
+    // TODO: store elem globally to prevent re-creating element for every calculation?
+    function calc(expr) {
+        var elem = document.createElement("div");
+        elem.style.display = "none";
+        elem.style.top = "calc(" + expr + ")";
+        document.body.appendChild(elem);
+        var val = window.getComputedStyle(elem, null).getPropertyValue("top");
+        document.body.removeChild(elem);
+        return val;
+    }
+    
     function evaluateExpression(expr) {
-        var operands = expr.split(/\s*(\+|\-|\*|\/)\s*(?!.*\))/g),
-            isFunction = /^([a-zA-Z][\w\-]*)(?=\(.*\))/;
+        // Is it a function?
+        if (/^([a-zA-Z][\w\-]*)(?=\(.*\)$)/.test(expr)) {
+            var functionData = /^([a-zA-Z][\w\-]*)\(\s*(.*)\s*\)/.exec(expr),
+                functionName = functionData[1],
+                functionArgs = functionData[2];
+        
+            // No arguments.
+            if (functionArgs === "") {
+                expr = applyFunction(functionName, []);
+            } else {
+                var argValues = [],
+                    inBrackets = false,
+                    // Beginning refers to beginning index of each argument.
+                    beginningIdx = 0,
+                    // The evaluated argument.
+                    argExpr = "";
 
-        // TODO: function operations.
+                // Iterate through each argument to obtain each individual argument
+                // in order to evaluate them.
+                for (var currCharIdx = 0; currCharIdx < functionArgs.length; currCharIdx++) {
+                    var char = functionArgs[currCharIdx];
+                    if (char === ")") {
+                        inBrackets = false;
+                    } else if (!inBrackets) {
+                        if (char === "(") {
+                            inBrackets = true;
+                        } else if (char === ",") {
+                            // Get the argument and trim it.
+                            argExpr = functionArgs.substring(beginningIdx, currCharIdx).trim();
+                            // Eval and add to array of evaluated args.
+                            argValues.push(evaluateExpression(argExpr));
+                            // Start after the comma for the beginning of the next arg.
+                            beginningIdx = currCharIdx + 1;
+                        }
+                    }
+                }
 
-        // Are there mathematical operators present?
-        if (operands.length > 1) {
-            if (isFunction.test(expr)) { // Is it a function?
-                ; // TODO
-            } else { // Must be some math expressions then.
-                // Cheating cause CSS has the calc "function" but support
-                // in older browsers is limited.
-                expr = "calc(" + expr + ")";
+                argExpr = functionArgs.substring(beginningIdx).trim();
+                argValues.push(evaluateExpression(argExpr));
+                // Call the function with all the evaluated arguments.
+                expr = applyFunction(functionName, argValues);
             }
-        } else {
-            // Evaluate the variable.
-            if (expr[0] === "@") {
-                // Check to see if one exists in local/global scope.
-                var variable = scope.findKey(expr.substr(1));
-                // If so, the evaluated variable is the value already evaluated.
-                if (variable !== null) {
-                    expr = variable.val;
-                } else {
-                    throwError(3, expr);
+        } else if (expr.indexOf("+") !== -1 || expr.indexOf("-") !== -1 ||
+                expr.indexOf("*") !== -1 || expr.indexOf("/") !== -1) { // TODO: improve?
+            var inBrackets = false,
+                // Beginning refers to beginning index of each subexpression.
+                beginningIdx = 0,
+                // The evaluated expression.
+                evalExpr = "",
+                // Subexpressions.
+                subExpr = "";
+
+            // Remove all whitespace since it's unnecessary.
+            expr = expr.replace(/ /g, "");
+            // Iterate through each subexpression in order to evaluate them.
+            for (var currCharIdx = 0; currCharIdx < expr.length; currCharIdx++) {
+                var char = expr[currCharIdx];
+                if (char === ")") {
+                    inBrackets = false;
+                } else if (!inBrackets) {
+                    if (char === "(") {
+                        inBrackets = true;
+                    } else if (char === "+" || char === "-" || char === "*" || char === "/") {
+                        // Get the subexpression and eval.
+                        if (expr[beginningIdx] === "(") {
+                            // Remove parenthesis.
+                            subExpr = expr.substring(beginningIdx + 1, currCharIdx - 1);
+                            evalExpr += "(" + evaluateExpression(subExpr) + ")";
+                        } else {
+                            subExpr = expr.substring(beginningIdx, currCharIdx);
+                            evalExpr += evaluateExpression(subExpr);
+                        }
+                        
+                        // Start after the operator for the beginning of the next expression.
+                        beginningIdx = currCharIdx + 1;
+                        evalExpr += " " + char + " ";
+                    }
                 }
-            } else if (isFunction.test(expr)) { // Is it a function?
-                var functionData = /^([a-zA-Z][\w\-]*)\(\s*(.*)\s*\)/.exec(expr),
-                    functionName = functionData[1],
-                    parameters = functionData[2];
-                // No arguments.
-                if (parameters === "") {
-                    expr = applyFunction(functionName, []);
-                } else {
-                    // TODO
-                    /*var args = [];
-                     for (var index = 0; index < ; index++) {
-                     if ()
-                     }
-                     
-                     applyFunction(functionData[1], args);*/
-                }
+            }
+
+            // Get the subexpression and eval.
+            if (expr[beginningIdx] === "(") {
+                subExpr = expr.substring(beginningIdx + 1, expr.lastIndexOf(")"));
+                evalExpr += "(" + evaluateExpression(subExpr) + ")";
+            } else {
+                subExpr = expr.substring(beginningIdx);
+                evalExpr += evaluateExpression(subExpr);
+            }
+            
+            expr = calc(evalExpr);
+        } else if (expr[0] === "@") { // Evaluate the variable.
+            // Check to see if one exists in local/global scope.
+            var variable = scope.findKey(expr.substr(1));
+            // If so, the evaluated variable is the value already evaluated.
+            if (variable !== null) {
+                expr = variable.val;
+            } else {
+                throwError(3, expr);
             }
         }
-        
+
         return expr;
     }
     
