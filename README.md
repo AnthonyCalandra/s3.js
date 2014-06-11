@@ -13,10 +13,10 @@ Current List of Features
 - Comment blocks
 - Scope
 - Error reporting
+- Evaluate math expressions
+- Functions
 
 Planned Features
 ========================
-- Evaluate math expressions
-- Functions
 - Built-in/default variables
 - Blocks within blocks(?)
