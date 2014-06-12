@@ -107,13 +107,7 @@ You can also get the value of previously defined variables like so:
 @default_height: 10px;
 .box {
   @this_height: @default_height + 15px;
-  height: @this_height;
-}
-```
-evaluates to:
-```css
-.box {
-  height: 25px;
+  height: @this_height; /* height: 25px; */
 }
 ```
 
@@ -127,7 +121,37 @@ s3 copies the values of variables; there is no concept of references (yet?):
 ```
 
 ### Variable Blocks
-TODO
+Variable blocks are defined as CSS ruleset-styled blocks of declarations with its own local scope which are bound to a name. For example:
+```css
+@box1_props {
+  @foo: 50%;
+  width: @foo;
+}
+
+@box2_props {
+  @foo: 100%;
+  height: @foo;
+  color: blue;
+}
+
+@box1_props; /* width: 50%; */
+@box2_props; /* height: 100%; color: blue; */
+```
+Variable blocks within variable blocks aren't (currently?) supported but it can be accomplished by chaining:
+```css
+@box1_props {
+    @foo: 50%;
+    width: @foo;
+}
+
+@box2_props {
+    @foo: 100%;
+    height: @foo;
+    @box1_props;
+}
+
+@box2_props; /* width: 50%; height: 100%; */
+```
 
 ### Comments
 Single line and double line comments are supported:
