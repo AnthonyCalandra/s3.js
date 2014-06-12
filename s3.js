@@ -118,39 +118,6 @@
         currentNode.element[key] = val;
         return true;
     };
-    
-    LinkedList.prototype.print = function() {
-
-        var length = this.length,
-                currentNode = this.head,
-                msg = "",
-                e = null;
-
-        while (length > 0) {
-
-            for (e in currentNode.element) {
-
-                if (currentNode.element.hasOwnProperty(e)) {
-
-                    msg += "key=" + e + " val=" + currentNode.element[e] + " ";
-
-                }
-
-            }
-
-
-
-            console.log(msg);
-
-            currentNode = currentNode.next;
-
-            length--;
-
-            msg = "";
-
-        }
-
-    };
 
     LinkedList.prototype.destroy = function() {
         delete this;
@@ -521,7 +488,6 @@
                         scope.addKey(blockName, blockContent);
                         blockName = "";
                         blockContent = "";
-                        scope.print();
                     }
                 }
             }
