@@ -126,6 +126,9 @@ s3 copies the values of variables; there is no concept of references (yet?):
 @new_height; /* 11px */
 ```
 
+### Variable Blocks
+TODO
+
 ### Comments
 Single line and double line comments are supported:
 ```css
@@ -143,3 +146,6 @@ evaluates to:
   width: 25%;
 }
 ```
+
+### Functions
+TODO
