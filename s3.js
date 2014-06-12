@@ -118,6 +118,39 @@
         currentNode.element[key] = val;
         return true;
     };
+    
+    LinkedList.prototype.print = function() {
+
+        var length = this.length,
+                currentNode = this.head,
+                msg = "",
+                e = null;
+
+        while (length > 0) {
+
+            for (e in currentNode.element) {
+
+                if (currentNode.element.hasOwnProperty(e)) {
+
+                    msg += "key=" + e + " val=" + currentNode.element[e] + " ";
+
+                }
+
+            }
+
+
+
+            console.log(msg);
+
+            currentNode = currentNode.next;
+
+            length--;
+
+            msg = "";
+
+        }
+
+    };
 
     LinkedList.prototype.destroy = function() {
         delete this;
@@ -484,10 +517,11 @@
                         // Remove local scope object and add contents of variable
                         // block to current scope.
                         scope.removeHead();
-                        scope.addKey(blockName, blockContent);
-                        scope.print();
                         
+                        scope.addKey(blockName, blockContent);
                         blockName = "";
+                        blockContent = "";
+                        scope.print();
                     }
                 }
             }
@@ -514,7 +548,7 @@
     
     // Add global scope.
     // TODO: add default vars.
-    scope.addToHead({});
+    scope.addToHead({"global":123});
     // Iterate through each line for every s3 script element.
     for (var i = 0; i < styleSheets.length; i++) {
         if (styleSheets[i].getAttribute("type") === "text/s3") {
