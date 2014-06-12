@@ -409,7 +409,7 @@
                 inCommentBlock = true;
             } else if (/^\@\w+/.test(token)) { // Has a valid var or block name been defined?
                 var varName = token.substr(1);
-                if (!/^[a-zA-Z]\w*$/.test(varName)) {
+                if (!/^[a-zA-Z_]\w*$/.test(varName)) {
                     throwError(2, token);
                 }
                 
