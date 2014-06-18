@@ -247,7 +247,7 @@
             tokens = line.split(/\s*(\:|\;|\{|\}){1}\s*/g),
             tokenQueue = new TokenQueue();
 
-        for (var tokenIdx = 0; tokenIdx < tokens.length; tokenIdx) {
+        for (var tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
             var token = tokens[tokenIdx];
             if (token !== "") {
                 tokenQueue.enqueue(token);
