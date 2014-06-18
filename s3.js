@@ -2,7 +2,7 @@
  * s3.js - Version 0.1
  * Designed and developed by Anthony Calandra - 2014.
  **/
-(function() {
+(function(settings) {
     if (typeof String.prototype.trim !== "function") {
         String.prototype.trim = function() {
             return this.replace(/^\s+|\s+$/g, "");
@@ -118,10 +118,6 @@
         currentNode.element[key] = val;
         return true;
     };
-
-    LinkedList.prototype.destroy = function() {
-        delete this;
-    };
     
     function TokenQueue() {
         this.list = new LinkedList();
@@ -158,26 +154,64 @@
         return this.length;
     };
     
-    var s3 = {},
+    var s3 = {
+            "UNIT_NONE": 0, "UNIT_PX": 1, "UNIT_MM": 2, "UNIT_CM": 3,
+            "UNIT_IN": 4, "UNIT_EM": 5, "UNIT_PERCENTAGE": 6, "UNIT_PT": 7,
+            "UNIT_PC": 8, "UNIT_EX": 9, "UNIT_CH": 10, "UNIT_REM": 11,
+            "UNIT_SEC": 12, "UNIT_MS": 13
+        },
         styleSheets = document.head.getElementsByTagName("script"),
         newStyleSheet = "",
         blockContent = "",
         blockName = "",
+        currentRuleset = "",
         inVarBlock = false,
         inCommentBlock = false,
         inCSSBlock = false,
         scope = new LinkedList(),
-        cssFunctions = ["attr", "blur", "brightness", "calc", "circle", "contrast", "cubic-bezier", "cycle", "drop-shadow", "element", "ellipse", "grayscale", "hsl", "hsla", "hue-rotate", "image", "inset", "invert", "linear-gradient", "matrix", "matrix3d", "minmax", "opacity", "perspective", "polygon", "radial-gradient", "rect", "repeat", "repeating-linear-gradient", "repeating-radial-gradient", "rgb", "rgba", "rotate", "rotatex", "rotatey", "rotatez", "rotate3d", "saturate", "scale", "scalex", "scaley", "scalez", "scale3d", "sepia", "skew", "skewx", "skewy", "steps", "translate", "translatex", "translatey", "translatez", "translate3d", "url", "var"],
+        unitType = {
+            "px": s3.UNIT_PX,
+            "mm": s3.UNIT_MM,
+            "cm": s3.UNIT_CM,
+            "in": s3.UNIT_IN,
+            "em": s3.UNIT_EM,
+            "%": s3.UNIT_PERCENTAGE,
+            "pt": s3.UNIT_PT,
+            "pc": s3.UNIT_PC,
+            "ex": s3.UNIT_EX,
+            "ch": s3.UNIT_CH,
+            "rem": s3.UNIT_REM,
+            "s": s3.UNIT_SEC,
+            "ms": s3.UNIT_MS
+        },
+        cssFunctions = [
+            "attr", "blur", "brightness", "calc", "circle", "contrast", 
+            "cubic-bezier", "cycle", "drop-shadow", "element", "ellipse", 
+            "grayscale", "hsl", "hsla", "hue-rotate", "image", "inset", 
+            "invert", "linear-gradient", "matrix", "matrix3d", "minmax", 
+            "opacity", "perspective", "polygon", "radial-gradient", "rect", 
+            "repeat", "repeating-linear-gradient", "repeating-radial-gradient", 
+            "rgb", "rgba", "rotate", "rotatex", "rotatey", "rotatez", "rotate3d",
+            "saturate", "scale", "scalex", "scaley", "scalez", "scale3d", "sepia", 
+            "skew", "skewx", "skewy", "steps", "translate", "translatex", 
+            "translatey", "translatez", "translate3d", "url", "var"
+        ],
         definedFunctions = (function() {
-            // TODO
-            return {
-                "url": function() {
-                    return "url(\"wat.png\")";
-                },
-                "add": function(x, y) {
-                    return parseInt(x) + parseInt(y) + "px";
+            // Start by defining built-in functions.
+            var functions = {
+                "percentage": function(val) {
+                    var percentValue = val.value;
+                    // Change px to %.
+                    if (val.unit === s3.UNIT_PX) {
+                        percentValue = (val.value / 100) + "%"; 
+                    } else { // Any other unit is undefined.
+                        percentValue = val.value + val.unit;
+                    }
+                    
+                    return percentValue;
                 }
             };
+            return functions;
         })();
     
     function applyStyle(styleSheet) {
@@ -213,11 +247,13 @@
             tokens = line.split(/\s*(\:|\;|\{|\}){1}\s*/g),
             tokenQueue = new TokenQueue();
 
-        tokens.forEach(function(token) {
+        for (var tokenIdx = 0; tokenIdx < tokens.length; tokenIdx) {
+            var token = tokens[tokenIdx];
             if (token !== "") {
                 tokenQueue.enqueue(token);
             }
-        });
+        }
+        
         return tokenQueue;
     }
     
@@ -248,7 +284,27 @@
                     // Beginning refers to beginning index of each argument.
                     beginningIdx = 0,
                     // The evaluated argument.
-                    argExpr = "";
+                    argExpr = "",
+                    createArgObject = function(expr) {
+                        // Eval and add to array of evaluated args.
+                        var evaluatedExpr = evaluateExpression(expr),
+                            unit = /(px|mm|cm|in|em|%|pt|pc|ex|ch|rem|s|ms)/.exec(evaluatedExpr);
+
+                        // Convert "stringified" units to numeric values.
+                        evaluatedExpr = parseFloat(evaluatedExpr);
+                        if (unit !== null) {
+                            unit = unit[1];
+                            unit = unitType[unit] ? unitType[unit] : s3.UNIT_NONE;
+                        } else {
+                            unit = s3.UNIT_NONE;
+                        }
+
+                        return {
+                            "value": evaluatedExpr,
+                            "cssRule": currentRuleset,
+                            "unit": unit
+                        };
+                };
 
                 // Iterate through each argument to obtain each individual argument
                 // in order to evaluate them.
@@ -262,8 +318,7 @@
                         } else if (char === ",") {
                             // Get the argument and trim it.
                             argExpr = functionArgs.substring(beginningIdx, currCharIdx).trim();
-                            // Eval and add to array of evaluated args.
-                            argValues.push(evaluateExpression(argExpr));
+                            argValues.push(createArgObject(argExpr));
                             // Start after the comma for the beginning of the next arg.
                             beginningIdx = currCharIdx + 1;
                         }
@@ -271,7 +326,7 @@
                 }
 
                 argExpr = functionArgs.substring(beginningIdx).trim();
-                argValues.push(evaluateExpression(argExpr));
+                argValues.push(createArgObject(argExpr));
                 // Call the function with all the evaluated arguments.
                 expr = applyFunction(functionName, argValues);
             }
@@ -421,7 +476,13 @@
                     // Dequeue the ';'.
                     tokens.dequeue();
                 } else if (currentLength >= 2 && nextToken === ";") {
-                    newStyleSheet += scope.findKey(varName).val;
+                    var variable = scope.findKey(varName);
+                    if (variable !== null) {
+                        newStyleSheet += variable.val;
+                    } else {
+                        throwError(3, token);
+                    }                    
+
                     // Dequeue the ';'.
                     tokens.dequeue();
                 } else {
@@ -448,6 +509,11 @@
                     parseBlock(blockTokens);
                 }
             } else if (/^((?:\#|\.)*[A-Za-z]+)+/.test(token)) { // Probably a vanilla CSS declaration.
+                // The first token is the ruleset name.
+                if (currentRuleset === "") {
+                    currentRuleset = token;
+                }
+                
                 if (currentLength >= 4 && nextToken === ":") {
                     // Dequeue the ':'.
                     tokens.dequeue();
@@ -476,6 +542,7 @@
                     if (!inVarBlock) {
                         if (inCSSBlock) {
                             inCSSBlock = false;
+                            currentRuleset = "";
                         }
                         
                         newStyleSheet += "}";
@@ -483,8 +550,7 @@
                         inVarBlock = false;
                         // Remove local scope object and add contents of variable
                         // block to current scope.
-                        scope.removeHead();
-                        
+                        scope.removeHead();                       
                         scope.addKey(blockName, blockContent);
                         blockName = "";
                         blockContent = "";
@@ -499,7 +565,6 @@
         var doParse = function(str) {
             var lineTokens = tokenize(str);
             if (!lineTokens.isEmpty()) {
-                //console.log("Stylesheet tokens for a line: ");
                 parseLine(lineTokens);
             }
         };
@@ -514,7 +579,7 @@
     
     // Add global scope.
     // TODO: add default vars.
-    scope.addToHead({"global":123});
+    scope.addToHead({});
     // Iterate through each line for every s3 script element.
     for (var i = 0; i < styleSheets.length; i++) {
         if (styleSheets[i].getAttribute("type") === "text/s3") {
@@ -531,4 +596,4 @@
     applyStyle(newStyleSheet);
     console.log(newStyleSheet);
     return s3;
-})();
+})(window.s3 || {});
