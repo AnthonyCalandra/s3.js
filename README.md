@@ -236,7 +236,7 @@ An example function using unit data:
   var value = val.value;
   if (val.unit === s3.UNIT_PERCENTAGE) {
     value /= 100;
-  } else if (val.unit === s3.SEC || val.unit === s3.MS) {
+  } else if (val.unit === s3.UNIT_SEC || val.unit === s3.UNIT_MS) {
     // Convert time to pixels? wat.
     return "";
   } else {
