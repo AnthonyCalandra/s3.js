@@ -172,4 +172,76 @@ evaluates to:
 ```
 
 ### Functions
-TODO
+Functions in s3 can be defined using Javascript code by adding elements to the s3.functions property before initializing s3.js. The return types of these functions have to be "type-castable" to a string. Example:
+```javascript
+window.s3 = {
+  "functions": {
+    // Override built-in percentage() function.
+    "percentage": function(val) {
+      return "100%";
+    },
+                    
+    // User-defined.
+    "wat": function(val1, val2) {
+      return val1.value + val2.value + "px";
+    }
+  }
+};
+```
+When used with:
+```css
+div {
+    @he: percentage(1);
+    margin: wat(1, 2);
+    height: @he;
+}
+```
+evaluates to:
+```css
+    @he: percentage(0);
+    margin: 12;
+    height: 100%;
+```
+As you can see, the arguments to functions are actually objects which contain information about the data sent. The objects have this form:
+
+| Property      | Value                                          | 
+| ------------- |:----------------------------------------------:|
+| value         | Contains the evaluated expression of the data. |
+| cssRule       | Which ruleset the data came from.              |
+| unit          | The data's unit.                               |
+
+Currently the following units are defined as part of the s3 object:
+
+| Unit          | Value                                          | 
+| ------------- |:----------------------------------------------:|
+| UNIT_NONE     | 0 |
+| UNIT_PX     | 1 |
+| UNIT_MM     | 2 |
+| UNIT_CM     | 3 |
+| UNIT_IN     | 4 |
+| UNIT_EM     | 5 |
+| UNIT_PERCENTAGE   | 6 |
+| UNIT_PT    | 7 |
+| UNIT_PC     | 8 |
+| UNIT_EX     | 9 |
+| UNIT_CH     | 10 |
+| UNIT_REM     | 11 |
+| UNIT_SEC     | 12 |
+| UNIT_MS     | 13 |
+
+An example function using unit data:
+```javascript
+"toPx": function(val) {
+  var value = val.value;
+  if (val.unit === s3.UNIT_PERCENTAGE) {
+    value /= 100;
+  } else if (val.unit === s3.SEC || val.unit === s3.MS) {
+    // Convert time to pixels? wat.
+    return "";
+  } else {
+    // And other units... etc.
+  }
+  
+  return value + "px";
+}
+```
