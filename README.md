@@ -191,16 +191,17 @@ window.s3 = {
 When used with:
 ```css
 div {
-    @he: percentage(1);
+    @he: percentage(0);
     margin: wat(1, 2);
     height: @he;
 }
 ```
 evaluates to:
 ```css
-    @he: percentage(0);
+div {
     margin: 12;
     height: 100%;
+}
 ```
 As you can see, the arguments to functions are actually objects which contain information about the data sent. The objects have this form:
 
