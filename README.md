@@ -199,7 +199,7 @@ div {
 evaluates to:
 ```css
 div {
-    margin: 12;
+    margin: 12px;
     height: 100%;
 }
 ```
