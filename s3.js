@@ -83,41 +83,41 @@
 
         return e.element;
     };
+    
+    LinkedList.prototype.getLength = function() {
+        return this.length;
+    };
 
-    // TODO: implement as function, not as method of LinkedList.
-    LinkedList.prototype.findKey = function(key) {
-        var currentNode = this.head,
+    function findKey(list, key) {
+        var currentNode = list.get(0),
             index = 0;
-        while (index < this.length) {
-            if (currentNode.element[key] !== undefined) {
+        while (index < list.getLength()) {
+            if (currentNode[key] !== undefined) {
                 return {
-                    "val": currentNode.element[key],
+                    "val": currentNode[key],
                     "index": index
                 };
             }
 
-            currentNode = currentNode.next;
-            index++;
+            currentNode = list.get(++index);
         }
 
         return null;
-    };
+    }
 
-    // TODO: implement as function, not as method of LinkedList.
-    LinkedList.prototype.addKey = function(key, val, index) {
-        if (index < 0 || index >= this.length) {
+    function addKey(list, key, val, index) {
+        if (index < 0 || index >= list.getLength()) {
             return false;
         }
 
-        var currentNode = this.head;
-        while (index) {
-            currentNode = currentNode.next;
-            index--;
+        var node = list.get(index);
+        if (node !== null) {
+            node[key] = val;
+            return true;
         }
-
-        currentNode.element[key] = val;
-        return true;
-    };
+        
+        return false;
+    }
     
     function TokenQueue() {
         this.list = new LinkedList();
@@ -200,15 +200,7 @@
             // Start by defining built-in functions.
             var functions = {
                 "percentage": function(val) {
-                    var percentValue = val.value;
-                    // Change px to %.
-                    if (val.unit === s3.UNIT_PX) {
-                        percentValue = (val.value / 100) + "%"; 
-                    } else { // Any other unit is undefined.
-                        percentValue = val.value + val.unit;
-                    }
-                    
-                    return percentValue;
+                    return (val.value * 100) + "%";
                 }
             };
             for (var fn in settings.functions) {
@@ -385,7 +377,7 @@
             expr = calc(evalExpr);
         } else if (expr[0] === "@") { // Evaluate the variable.
             // Check to see if one exists in local/global scope.
-            var variable = scope.findKey(expr.substr(1));
+            var variable = findKey(scope, expr.substr(1));
             // If so, the evaluated variable is the value already evaluated.
             if (variable !== null) {
                 expr = variable.val;
@@ -430,7 +422,7 @@
         function parseVariable(name, expr) {
             console.log("Parse var: " + name + " with expression: " + expr);
             // Store the evaluated result.
-            scope.addKey(name, evaluateExpression(expr));
+            addKey(scope, name, evaluateExpression(expr));
         }
             
         function parseBlock(blockTokens) {
@@ -481,7 +473,7 @@
                     // Dequeue the ';'.
                     tokens.dequeue();
                 } else if (currentLength >= 2 && nextToken === ";") {
-                    var variable = scope.findKey(varName);
+                    var variable = findKey(scope, varName);
                     if (variable !== null) {
                         newStyleSheet += variable.val;
                     } else {
@@ -556,7 +548,7 @@
                         // Remove local scope object and add contents of variable
                         // block to current scope.
                         scope.removeHead();                       
-                        scope.addKey(blockName, blockContent);
+                        addKey(scope, blockName, blockContent);
                         blockName = "";
                         blockContent = "";
                     }
@@ -565,7 +557,7 @@
         }
     }
     
-    s3.apply = function(styleSheet) {
+    function apply(styleSheet) {
         // TODO: new name..? ugh.
         var doParse = function(str) {
             var lineTokens = tokenize(str);
@@ -592,7 +584,7 @@
             for (var line = 0; line < styleSheetCode.length; line++) {
                 var trimmedStyleSheet = styleSheetCode[line].trim();
                 if (trimmedStyleSheet !== "") {
-                    s3.apply(trimmedStyleSheet);
+                    apply(trimmedStyleSheet);
                 }
             }
         }
@@ -600,5 +592,5 @@
     
     applyStyle(newStyleSheet);
     console.log(newStyleSheet);
-    return s3;
+    window.s3 = s3;
 })(window.s3 || {});
