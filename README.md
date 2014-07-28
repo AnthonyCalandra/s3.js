@@ -180,7 +180,7 @@ window.s3 = {
     "percentage": function(val) {
       return "100%";
     },
-                    
+
     // User-defined.
     "wat": function(val1, val2) {
       return val1.value + val2.value + "px";
@@ -205,7 +205,7 @@ div {
 ```
 As you can see, the arguments to functions are actually objects which contain information about the data sent. The objects have this form:
 
-| Property      | Value                                          | 
+| Property      | Value                                          |
 | ------------- |:----------------------------------------------:|
 | value         | Contains the evaluated expression of the data. |
 | cssRule       | Which ruleset the data came from.              |
@@ -213,7 +213,7 @@ As you can see, the arguments to functions are actually objects which contain in
 
 Currently the following units are defined as part of the s3 object:
 
-| Unit          | Value                                          | 
+| Unit          | Value                                          |
 | ------------- |:----------------------------------------------:|
 | UNIT_NONE     | 0 |
 | UNIT_PX     | 1 |
@@ -234,15 +234,15 @@ An example function using unit data:
 ```javascript
 "toPx": function(val) {
   var value = val.value;
-  if (val.unit === s3.UNIT_PERCENTAGE) {
+  if (val.unit === this.units.UNIT_PERCENTAGE) {
     value /= 100;
-  } else if (val.unit === s3.UNIT_SEC || val.unit === s3.UNIT_MS) {
+  } else if (val.unit === this.units.UNIT_SEC || val.unit === this.units.UNIT_MS) {
     // Convert time to pixels? wat.
     return "";
   } else {
     // And other units... etc.
   }
-  
+
   return value + "px";
 }
 ```

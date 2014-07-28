@@ -1,0 +1,32 @@
+{
+  "name": "s3.js",
+  "version": "0.2.0",
+  "description": "CSS preprocessor which features variables, functions, blocks, etc.",
+  "main": "lib/s3.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnthonyCalandra/s3.js.git"
+  },
+  "keywords": [
+    "s3",
+    "css",
+    "css3",
+    "function",
+    "variable",
+    "block",
+    "error",
+    "reporting",
+    "preprocessor",
+    "js",
+    "javascript",
+    "math",
+    "browser",
+    "comment"
+  ],
+  "author": "Anthony Calandra <anthony@anthony-calandra.com>",
+  "license": "GNU",
+  "bugs": {
+    "url": "https://github.com/AnthonyCalandra/s3.js/issues"
+  },
+  "homepage": "https://github.com/AnthonyCalandra/s3.js"
+}
