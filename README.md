@@ -1,4 +1,4 @@
-s3.js
+s3.js - v0.2
 =====
 
 Scriptable Style Sheets - A light-weight CSS preprocessor designed for the browser which features variables, functions, blocks, etc.
